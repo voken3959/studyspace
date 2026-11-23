@@ -14,9 +14,12 @@ const request = async (path, options = {}, token) => {
 export const cloudReady = () => Boolean(url && key)
 export const getSession = () => JSON.parse(localStorage.getItem(sessionKey) || 'null')
 export const signOut = () => localStorage.removeItem(sessionKey)
-export async function signIn(email, password, isSignUp = false) {
+const usernameToEmail = username => `${username.trim().toLowerCase()}@studyspace.local`
+export async function signIn(username, password, isSignUp = false) {
+  const cleanUsername = username.trim().toLowerCase()
+  if (!/^[a-z0-9_-]{3,30}$/.test(cleanUsername)) throw new Error('Use 3–30 letters, numbers, hyphens, or underscores for your username.')
   const path = isSignUp ? '/auth/v1/signup' : '/auth/v1/token?grant_type=password'
-  const data = await request(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
+  const data = await request(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: usernameToEmail(cleanUsername), password, ...(isSignUp ? { data: { username: cleanUsername } } : {}) }) })
   if (!data.access_token) return { needsConfirmation: true }
   const session = { access_token: data.access_token, user: data.user, expires_at: data.expires_at }
   localStorage.setItem(sessionKey, JSON.stringify(session))

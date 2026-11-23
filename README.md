@@ -27,7 +27,8 @@ StudySpace works without an account, storing cards in the browser. To sync cards
 2. In its SQL Editor, run the contents of `supabase/schema.sql`.
 3. Copy `.env.example` to `.env` and add the project URL and public publishable key from Supabase.
 4. For Vercel, add the same two variables in **Project Settings → Environment Variables**, then redeploy.
-5. In StudySpace, tap the cloud icon and create an account. Every card change will then sync to Supabase.
+5. In Supabase, open **Authentication → Providers → Email** and turn off **Confirm email**. StudySpace uses a username and password interface, so email confirmations must be disabled.
+6. In StudySpace, tap the cloud icon and create an account. Every card change will then sync to Supabase.
 
 The production configuration is already supplied in `.env.production`. For a hosted deployment, also add these variables in the host's environment settings so they remain explicit and easy to manage.
 
