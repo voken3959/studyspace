@@ -20,6 +20,17 @@ A mobile-first spaced repetition app built with React and Vite.
 4. Run `npm run dev`
 5. Open the local URL shown in the terminal.
 
+## Optional cloud sync with Supabase
+StudySpace works without an account, storing cards in the browser. To sync cards automatically across phones and computers:
+
+1. Create a Supabase project.
+2. In its SQL Editor, run the contents of `supabase/schema.sql`.
+3. Copy `.env.example` to `.env` and add the project URL and public publishable key from Supabase.
+4. For Vercel, add the same two variables in **Project Settings → Environment Variables**, then redeploy.
+5. In StudySpace, tap the cloud icon and create an account. Every card change will then sync to Supabase.
+
+Never put a Supabase `service_role` key in the app. The public publishable (or anon) key is the correct browser key; the row-level security policies in the supplied schema keep each account's cards private.
+
 ## Publish with GitHub + Vercel
 1. Create a new GitHub repository.
 2. Upload all files in this project (the contents of this folder, not the ZIP itself).
@@ -37,8 +48,7 @@ Every push to the connected GitHub branch will trigger a new Vercel deployment.
 4. Tap Add.
 
 ## Important limitations
-- This first version stores cards in IndexedDB on the current browser/device. It does not yet have user accounts or cloud sync.
-- Clearing website data can remove locally stored cards. Export/backup and cloud sync should be added before relying on it for important study material.
+- Without signing in, cards are stored in IndexedDB on the current browser/device. Clearing website data can remove them, so use a downloaded backup or configure Supabase sync.
 - The scheduling is a simple starter algorithm, not a full FSRS implementation.
 - For reliable offline use, test the deployed PWA on the target devices. The service worker caches the app shell and runtime GET requests.
 - Image labels can be positioned by tapping the uploaded image. The current review screen shows the label names rather than hiding/revealing each marker individually; that can be expanded in a later iteration.
