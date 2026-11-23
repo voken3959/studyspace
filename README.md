@@ -30,6 +30,13 @@ StudySpace works without an account, storing cards in the browser. To sync cards
 5. In Supabase, open **Authentication → Providers → Email** and turn off **Confirm email**. StudySpace uses a username and password interface, so email confirmations must be disabled.
 6. In StudySpace, tap the cloud icon and create an account. Every card change will then sync to Supabase.
 
+### Google sign-in
+To enable the **Continue with Google** button, create a Google OAuth Web client, then add this as its authorised redirect URI:
+
+`https://gdafhxpiottikdrgdzsw.supabase.co/auth/v1/callback`
+
+Add that client ID and secret in **Supabase → Authentication → Providers → Google**, and add your deployed StudySpace URL to **Authentication → URL Configuration → Redirect URLs**. Supabase requires each post-sign-in redirect URL to be explicitly allowed.
+
 The production configuration is already supplied in `.env.production`. For a hosted deployment, also add these variables in the host's environment settings so they remain explicit and easy to manage.
 
 Never put a Supabase `service_role` key in the app. The public publishable (or anon) key is the correct browser key; the row-level security policies in the supplied schema keep each account's cards private.

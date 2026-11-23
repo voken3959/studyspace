@@ -14,6 +14,23 @@ const request = async (path, options = {}, token) => {
 export const cloudReady = () => Boolean(url && key)
 export const getSession = () => JSON.parse(localStorage.getItem(sessionKey) || 'null')
 export const signOut = () => localStorage.removeItem(sessionKey)
+export function startGoogleSignIn() {
+  if (!cloudReady()) throw new Error('Cloud sync has not been configured yet.')
+  const redirectTo = `${window.location.origin}${window.location.pathname}`
+  window.location.assign(`${url}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`)
+}
+export async function consumeOAuthRedirect() {
+  const params = new URLSearchParams(window.location.hash.slice(1))
+  const error = params.get('error_description') || params.get('error')
+  const accessToken = params.get('access_token')
+  if (!accessToken && !error) return null
+  window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`)
+  if (error) throw new Error(error)
+  const user = await request('/auth/v1/user', {}, accessToken)
+  const session = { access_token: accessToken, user, expires_at: Number(params.get('expires_in') || 0) + Math.floor(Date.now() / 1000) }
+  localStorage.setItem(sessionKey, JSON.stringify(session))
+  return session
+}
 const usernameToEmail = username => `${username.trim().toLowerCase()}@studyspace.local`
 export async function signIn(username, password, isSignUp = false) {
   const cleanUsername = username.trim().toLowerCase()
