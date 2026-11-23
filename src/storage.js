@@ -27,6 +27,7 @@ async function transaction(store, mode, action) {
 export const getCards = () => transaction(STORE, 'readonly', store => store.getAll())
 export const saveCard = card => transaction(STORE, 'readwrite', store => store.put(card))
 export const deleteCard = id => transaction(STORE, 'readwrite', store => store.delete(id))
+export const clearCards = () => transaction(STORE, 'readwrite', store => store.clear())
 export const saveCards = async cards => Promise.all(cards.map(saveCard))
 export async function getSetting(key, fallback) {
   const result = await transaction(SETTINGS, 'readonly', store => store.get(key))

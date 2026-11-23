@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Home, Library, Plus, Brain, ChartNoAxesColumn, Search, ChevronRight, ArrowLeft, ImagePlus, X, Check, RotateCcw, BookOpen, Layers, Trash2, Sparkles, Download, Upload, Copy, Flame, Clock3, Shuffle, Keyboard, FileCheck2, Unplug, Cloud, RefreshCw, LogOut } from 'lucide-react'
-import { getCards, saveCard as saveLocalCard, saveCards as saveLocalCards, deleteCard as deleteLocalCard, seedIfEmpty, getSetting, saveSetting } from './storage'
+import { getCards, saveCard as saveLocalCard, saveCards as saveLocalCards, deleteCard as deleteLocalCard, clearCards as clearLocalCards, seedIfEmpty, getSetting, saveSetting } from './storage'
 import { cloudReady, getSession, signIn, signOut, pullCards, pushCards, removeCloudCard, startGoogleSignIn, consumeOAuthRedirect } from './cloud'
 
 const today = () => new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -8,6 +8,8 @@ const dayKey = () => new Date().toISOString().slice(0, 10)
 const blank = { front: '', back: '', subject: 'Geography', type: 'Basic', tags: '', image: null, labels: [] }
 const initialRatings = { Again: 0, Hard: 0, Good: 0, Easy: 0 }
 const dueText = card => !card.dueAt || card.dueAt <= Date.now() ? 'Due now' : `Due ${new Date(card.dueAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+const cardFingerprint = card => JSON.stringify([card.front?.trim().toLowerCase(), card.back?.trim().toLowerCase(), card.subject?.trim().toLowerCase(), card.type, card.tags?.trim().toLowerCase(), card.image || null, card.labels || []])
+const preferredCard = (first, second) => ((second.reviews || 0) * 10 + (second.correct || 0) > (first.reviews || 0) * 10 + (first.correct || 0) ? second : first)
 
 export default function App() {
   const [cards, setCards] = useState([]), [page, setPage] = useState('home'), [search, setSearch] = useState(''), [filter, setFilter] = useState('All')
@@ -24,7 +26,7 @@ export default function App() {
   async function saveCard(card) { await saveLocalCard(card); if (!cloudSession) return; try { await pushCards([card], cloudSession); setSyncState('Synced') } catch { setSyncState('Saved on device') } }
   async function saveCards(cardsToSave) { await saveLocalCards(cardsToSave); if (!cloudSession) return; try { await pushCards(cardsToSave, cloudSession); setSyncState('Synced') } catch { setSyncState('Saved on device') } }
   async function deleteCard(id) { await deleteLocalCard(id); if (!cloudSession) return; try { await removeCloudCard(id, cloudSession); setSyncState('Synced') } catch { setSyncState('Saved on device') } }
-  async function syncNow(activeSession = cloudSession) { if (!activeSession) return setAuthOpen(true); setSyncState('Syncing…'); try { await pushCards(cards, activeSession); const remoteCards = await pullCards(activeSession); const merged = new Map(cards.map(card => [card.id, card])); remoteCards.forEach(card => merged.set(card.id, card)); await saveLocalCards([...merged.values()]); await refresh(); setSyncState('Synced'); notify('Your cards are safely synced.') } catch (error) { setSyncState('Saved on device'); notify(error.message || 'Could not sync right now.') } }
+  async function syncNow(activeSession = cloudSession) { if (!activeSession) return setAuthOpen(true); setSyncState('Syncing…'); try { const remoteCards = await pullCards(activeSession); const unique = new Map(); [...remoteCards, ...cards].forEach(card => { const key = cardFingerprint(card); unique.set(key, unique.has(key) ? preferredCard(unique.get(key), card) : card) }); const merged = [...unique.values()]; const retainedIds = new Set(merged.map(card => card.id)); const duplicateCloudIds = remoteCards.filter(card => !retainedIds.has(card.id)).map(card => card.id); await clearLocalCards(); await saveLocalCards(merged); await pushCards(merged, activeSession); await Promise.all(duplicateCloudIds.map(id => removeCloudCard(id, activeSession))); await refresh(); setSyncState('Synced'); notify(duplicateCloudIds.length ? `Synced and removed ${duplicateCloudIds.length} duplicate cards.` : 'Your cards are safely synced.') } catch (error) { setSyncState('Saved on device'); notify(error.message || 'Could not sync right now.') } }
   async function submitAuth(event) { event.preventDefault(); try { const result = await signIn(auth.username, auth.password, authMode === 'signup'); if (result.needsConfirmation) return notify('Account confirmation is still enabled. Turn it off in Supabase Auth settings.'); setCloudSession(result.session); setAuthOpen(false); await syncNow(result.session) } catch (error) { notify(error.message || 'Could not sign in.') } }
   function useGoogle() { try { startGoogleSignIn() } catch (error) { notify(error.message || 'Google sign-in is unavailable.') } }
   function disconnectCloud() { signOut(); setCloudSession(null); setSyncState('On this device'); notify('Signed out. Your cards remain on this device.') }
