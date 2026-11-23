@@ -1,41 +1,38 @@
 const DB_NAME = 'studyspace-db'
 const STORE = 'cards'
+const SETTINGS = 'settings'
 
 function openDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1)
-    request.onupgradeneeded = () => request.result.createObjectStore(STORE, { keyPath: 'id' })
+    const request = indexedDB.open(DB_NAME, 2)
+    request.onupgradeneeded = () => {
+      const db = request.result
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(SETTINGS)) db.createObjectStore(SETTINGS, { keyPath: 'key' })
+    }
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error)
   })
 }
 
-export async function getCards() {
+async function transaction(store, mode, action) {
   const db = await openDB()
   return new Promise((resolve, reject) => {
-    const request = db.transaction(STORE).objectStore(STORE).getAll()
+    const request = action(db.transaction(store, mode).objectStore(store))
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error)
   })
 }
 
-export async function saveCard(card) {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const request = db.transaction(STORE, 'readwrite').objectStore(STORE).put(card)
-    request.onsuccess = () => resolve(card)
-    request.onerror = () => reject(request.error)
-  })
+export const getCards = () => transaction(STORE, 'readonly', store => store.getAll())
+export const saveCard = card => transaction(STORE, 'readwrite', store => store.put(card))
+export const deleteCard = id => transaction(STORE, 'readwrite', store => store.delete(id))
+export const saveCards = async cards => Promise.all(cards.map(saveCard))
+export async function getSetting(key, fallback) {
+  const result = await transaction(SETTINGS, 'readonly', store => store.get(key))
+  return result?.value ?? fallback
 }
-
-export async function deleteCard(id) {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const request = db.transaction(STORE, 'readwrite').objectStore(STORE).delete(id)
-    request.onsuccess = resolve
-    request.onerror = () => reject(request.error)
-  })
-}
+export const saveSetting = (key, value) => transaction(SETTINGS, 'readwrite', store => store.put({ key, value }))
 
 export async function seedIfEmpty() {
   const existing = await getCards()
@@ -49,10 +46,9 @@ export async function seedIfEmpty() {
     ['When did World War 2 begin?', '1939.', 'History', 'Basic'],
   ]
   const cards = examples.map(([front, back, subject, type]) => ({
-    id: crypto.randomUUID(), front, back, subject, type, tags: '', image: null,
-    labels: [], createdAt: Date.now(), dueAt: Date.now(), interval: 0,
-    reviews: 0, correct: 0, mastered: false
+    id: crypto.randomUUID(), front, back, subject, type, tags: '', image: null, labels: [],
+    createdAt: Date.now(), dueAt: Date.now(), interval: 0, reviews: 0, correct: 0, mastered: false
   }))
-  await Promise.all(cards.map(saveCard))
+  await saveCards(cards)
   return cards
 }
