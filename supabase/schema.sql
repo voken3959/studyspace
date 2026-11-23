@@ -8,6 +8,16 @@ create table if not exists public.studyspace_cards (
 
 alter table public.studyspace_cards enable row level security;
 
+-- Allow signed-in StudySpace users to access the table. Row-level policies below
+-- still restrict every request to the matching user_id.
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.studyspace_cards to authenticated;
+
+drop policy if exists "Users can read their own cards" on public.studyspace_cards;
+drop policy if exists "Users can create their own cards" on public.studyspace_cards;
+drop policy if exists "Users can update their own cards" on public.studyspace_cards;
+drop policy if exists "Users can delete their own cards" on public.studyspace_cards;
+
 create policy "Users can read their own cards"
 on public.studyspace_cards for select using (auth.uid() = user_id);
 

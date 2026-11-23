@@ -24,7 +24,7 @@ A mobile-first spaced repetition app built with React and Vite.
 StudySpace works without an account, storing cards in the browser. To sync cards automatically across phones and computers:
 
 1. Create a Supabase project.
-2. In its SQL Editor, run the contents of `supabase/schema.sql`.
+2. In its SQL Editor, run the contents of `supabase/schema.sql`. If you created the table before the latest version, run the file again to apply the access grants.
 3. Copy `.env.example` to `.env` and add the project URL and public publishable key from Supabase.
 4. For Vercel, add the same two variables in **Project Settings → Environment Variables**, then redeploy.
 5. In Supabase, open **Authentication → Providers → Email** and turn off **Confirm email**. StudySpace uses a username and password interface, so email confirmations must be disabled.
